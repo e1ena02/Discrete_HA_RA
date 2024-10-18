@@ -466,6 +466,32 @@ function [params, all_names] = parameters(runopts)
     params(end).descr = 'Temptation in {0, 0.05, 0.1}';
     params(end).tex_header = 'Temptation';
     params(end).tex_header_values.tempt = '0, 0.05, 0.1';
+    
+    name = 'Expense heterogeneity'
+    params(end+1) = setup.Params(4, name, quarterly_b_params);
+    params(end).phi = [1/100 0 0 0];
+    params(end).descr = 'Expense heterogeneity in 1/100 0 0 0';
+    params(end).tex_header = 'Expense Heterogeneity'
+    params(end).tex_header_values.tempt = '1/100, 0, 0, 0'
+
+    name = 'Permanent r het, r in {-1,1,3} p.a.';
+    params(end+1) = setup.Params(ifreq, name, quarterly_b_params);
+    params(end).r = [-1, 1, 3] / 100;
+    params(end).betaH0 = -1e-4;
+    params(end).beta0 = 0.973149481985717;
+    params(end).group = {'Q6'};
+    params(end).descr = 'r in {-1, 1, 3}';
+    params(end).tex_header = 'r';
+    params(end).tex_header_values.r = '-0.01, 0.01, 0.03';
+
+    name = 'Long-term unemployment'
+    params(end + 1) = setup.Params(4, name, quarterly_b_params);
+    params(end).nz = 3; %% 0 means employed, 1 unemployed, 2, long-term unemployed
+    params(end).prob_zswitch = .01;
+    params(end).zdist_forced = 1/1000;
+    params(end).descr = 'long-term unemployment 0, 1, 2'
+    params(end).tex_header = 'long-term unemployment'
+
 
     %----------------------------------------------------------------------
     % PART 3a, ANNUAL MODEL

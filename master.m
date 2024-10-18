@@ -12,7 +12,7 @@ close all;
 runopts.calibrate = true; % wrap code in nonlinear solver
 runopts.fast = false; % very small asset and income grids for testing
 runopts.Simulate = false; % also solve distribution via simulation
-runopts.MakePlots = false;
+runopts.MakePlots = true;
 runopts.MPCs = true;
 runopts.MPCs_news = true;
 runopts.MPCs_loan_and_loss = false;
@@ -23,6 +23,7 @@ runopts.SaveOutput = true;
 runopts.mode = 'parameters'; % 'parameters'
 
 % select experiment (ignored when run on server)
+%name = sprintf('HtM = %g', 0.142) %%for HtM households
 runopts.name_to_run = 'Quarterly'; % ''
 runopts.number = []; % []
 
@@ -91,9 +92,48 @@ writetable(table_out, runopts.savexlxpath, 'WriteRowNames', true);
 %% ------------------------------------------------------------------------
 % FIGURES
 % -------------------------------------------------------------------------
+% if runopts.MakePlots
+%     mkdir('output/figures')
+%     if strcmp(params.name, name)
+%         % Quarterline baseline
+%         statistics.DHAPlots.consumption_wealth_overlay(results.stats, params);
+%         figpath = fullfile('output', 'baseline_quarterly_c_x_overlay.jpg');
+%         saveas(gcf, figpath)
+% 
+%         statistics.DHAPlots.mpc_function(results.stats, 'mpc_type', 'period');
+%         figpath = fullfile('output', 'baseline_quarterly_period_mpcs.jpg');
+%         saveas(gcf, figpath)
+% 
+%         figpath = fullfile('output', 'MPC_Wealth_Mass_Overlay.jpg');
+%         saveas(gcf, figpath);
+% 
+%         statistics.DHAPlots.mpc_function(results.stats, 'mpc_type', 'cumulative');
+%         figpath = fullfile('output', 'baseline_quarterly_cumulative_mpcs.jpg');
+%         saveas(gcf, figpath)
+% 
+%         statistics.DHAPlots.wealth_mpc_overlay(results.stats, params,1);
+%         figpath = fullfile('output', 'combined_wealth_mpc_overlay.jpg');
+%         saveas(gcf, figpath);
+%     elseif params.nbeta > 1
+%         statistics.DHAPlots.consumption_wealth_overlay(results.stats, params,...
+%             'curve_variable', 'beta');
+%         figpath = fullfile('output', 'fixed_beta_heterogeneity_c_x_overlay.jpg');
+%         saveas(gcf, figpath)
+%     elseif numel(params.r) > 1
+%         statistics.DHAPlots.consumption_wealth_overlay(results.stats, params,...
+%             'curve_variable', 'r');
+%         figpath = fullfile('output', 'fixed_returns_heterogeneity_c_x_overlay.jpg');
+%         saveas(gcf, figpath)
+%     elseif numel(params.risk_aver) > 1
+%         statistics.DHAPlots.consumption_wealth_overlay(results.stats, params,...
+%             'curve_variable', 'crra');
+%         figpath = fullfile('output', 'fixed_ies_heterogeneity_c_x_overlay.jpg');
+%         saveas(gcf, figpath)
+%     end
 if runopts.MakePlots
-    mkdir('output/figures')
-    if strcmp(params.name, 'Quarterly')
+    mkdir('output/figures')  % Create a directory for figures
+
+   if strcmp(params.name, 'Quarterly')
         % Quarterline baseline
         statistics.DHAPlots.consumption_wealth_overlay(results.stats, params);
         figpath = fullfile('output', 'baseline_quarterly_c_x_overlay.jpg');
@@ -123,4 +163,3 @@ if runopts.MakePlots
         saveas(gcf, figpath)
     end
 end
-        

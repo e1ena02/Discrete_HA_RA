@@ -100,6 +100,7 @@ classdef Params < handle
         risk_aver = 1;
     	beta0 = 0.98;
     	temptation = 0;
+        phi = 0;
 
         % Bounds on beta (used when calibrating)
     	betaL = 0.80; % lower bound

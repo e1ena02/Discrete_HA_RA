@@ -7,7 +7,7 @@ classdef Prefs_R_Heterogeneity < handle
 	% of additional heterogeneity.
 	%
 	% Brian Livingston, 2020
-	% livingstonb@uchicago.edu
+	% livingstonb@uchicago.edu/
 
 	properties (SetAccess = private)
 		% Grid of betas, centered around zero
@@ -24,11 +24,13 @@ classdef Prefs_R_Heterogeneity < handle
 		% Returns matrices
 		R_broadcast;
 		r_broadcast;
+        phi_broadcast;
 
 		% Matrices for risk aversion, inverse IES, and temptation parameter
 		risk_aver_broadcast;
 		invies_broadcast;
 		temptation_broadcast;
+        expense_broadcast;
 
 		% Distribution and transition matrices for z-hetergeneity
 		zdist;
@@ -114,7 +116,14 @@ classdef Prefs_R_Heterogeneity < handle
             nr = numel(params.r);
 			obj.r_broadcast = reshape(params.r, [1 1 1 nr]);
 		    obj.R_broadcast = 1 + obj.r_broadcast;
-		end
+        end
+        %% -------------------------------------------------------
+	    % Expense Heterogeneity
+	    % --------------------------------------------------------
+        function initialize_expense_heterogeneity(obj, params)
+            np = numel(params.phi)
+            obj.phi_broadcast = reshape(params.phi, [1 1 1 1 np])
+        end
 
 		%% -------------------------------------------------------
 	    % Distributions and Transition Matrix
@@ -130,6 +139,13 @@ classdef Prefs_R_Heterogeneity < handle
 	    	if obj.nz == 1
 	    		obj.zdist = 1;
 		        obj.ztrans = 1;
+            elseif obj.nz == 3
+                    obj.zdist = [0.8, 0.195, .005];
+                    obj.ztrans = [
+                         0.8, 0.15, 0.05;  % From employed to employed, unemployed, long-term unemployed
+                         0.4, 0.5, 0.1;    % From unemployed to employed, unemployed, long-term unemployed
+                         0.2, 0.3, 0.5    
+                        ];
 		    else
 		    	diagonal = (1-params.prob_zswitch) * ones(obj.nz, 1);
 		        off_diag = switch_prob * ones(obj.nz);

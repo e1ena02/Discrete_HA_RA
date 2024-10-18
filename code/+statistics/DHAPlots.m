@@ -14,9 +14,9 @@ classdef DHAPlots
             parse(parser, varargin{:});
 
             options = parser.Results;
-            
+
             xvars = stats.xgrid_variables;
-            
+
             % Cash-on-hand histogram
             sorted_mat = sortrows([xvars.xvals(:), xvars.xdist(:)]);
             xvals = sorted_mat(:,1);
@@ -27,9 +27,9 @@ classdef DHAPlots
             xid(ixunique) = 1;
             xid = cumsum(xid);
             xdist = accumarray(xid, xdist);
-            
+
             [edges, counts] = smoothed_histogram(xvals, xdist, options.nbins, options.x_ub);
-            
+
             % Consumption policy functions
             if strcmp(options.curve_variable, 'yP')
                 if isempty(options.curve_indices)
@@ -60,7 +60,7 @@ classdef DHAPlots
                     cvals_z = xvars.con_x(:,iyP,1,iz);
                     con_x{ifig} = sortrows([xvals_iz(:), cvals_z(:)]);
                 end
-            
+
                 if strcmp(options.curve_variable, 'beta')
                     labels = {'$\beta_{high}$', '$\beta_{mid}$', '$\beta_{low}$'};
                     figure_order = [3, 2, 1];
@@ -82,7 +82,8 @@ classdef DHAPlots
                     figure_order = [3, 2, 1];
                 end
             end
-            
+
+
             % Plots
             close all
             ax = axes();
@@ -100,14 +101,14 @@ classdef DHAPlots
             wealth_hist = histogram('Parent', ax, 'BinEdges', edges, 'BinCounts', counts);
             ylabel('$f_x$', 'FontWeight', 'bold', 'Interpreter', 'latex',...
                 'Rotation', 0)
-            
+
             xlabel('$x_t$', 'FontWeight', 'bold', 'Interpreter', 'latex')
             legend(labels, 'Interpreter','latex', 'Location', 'southeast')
             legend('boxoff')
 
             format_plot(ax);
             xlim([0, options.x_ub])
-            
+
             yyaxis left
             ylab = get(ax, 'ylabel');
             ylab.Position
@@ -154,6 +155,8 @@ classdef DHAPlots
 
             ax = format_plot(ax);
         end
+
+
     end
 end
 
@@ -161,7 +164,7 @@ function [bins, vals] = smoothed_histogram(agrid, pmf, nbins, amax)
 	a_cdf = cumsum(pmf);
 	cdf_interp = griddedInterpolant(agrid, a_cdf,...
 		'pchip', 'nearest');
-    
+
 	amin = agrid(1);
 	spacing = (amax - amin) / nbins;
 	bins = 1:nbins;
@@ -183,7 +186,7 @@ function [bins, vals] = smoothed_histogram(agrid, pmf, nbins, amax)
 		vals(ibin) = P_lt_end - P_lt_start;
     end
 
-    
+
 	bins = [amin, bins];
 end
 
@@ -191,3 +194,4 @@ function ax = format_plot(ax)
     set(gcf,'color','w');
     set(ax, 'FontSize', statistics.DHAPlots.fontsize);
 end
+
