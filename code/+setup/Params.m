@@ -184,7 +184,7 @@ classdef Params < handle
             if nargin >= 3
                 pfields = fields(addl_params)';
                 for pfield = pfields
-                    obj.(pfield{1}) = addl_params.(pfield{1});
+         obj.(pfield{1}) = addl_params.(pfield{1});
                 end
             end
         end

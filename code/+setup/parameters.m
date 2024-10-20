@@ -467,11 +467,11 @@ function [params, all_names] = parameters(runopts)
     params(end).tex_header = 'Temptation';
     params(end).tex_header_values.tempt = '0, 0.05, 0.1';
     
-    name = 'Expense heterogeneity'
+    name = 'Expense heterogeneity';
     params(end+1) = setup.Params(4, name, quarterly_b_params);
     params(end).phi = [1/100 0 0 0];
     params(end).descr = 'Expense heterogeneity in 1/100 0 0 0';
-    params(end).tex_header = 'Expense Heterogeneity'
+    params(end).tex_header = 'Expense Heterogeneity';
     params(end).tex_header_values.tempt = '1/100, 0, 0, 0'
 
     name = 'Permanent r het, r in {-1,1,3} p.a.';
