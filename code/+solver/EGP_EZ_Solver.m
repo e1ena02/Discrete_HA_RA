@@ -18,7 +18,9 @@ classdef EGP_EZ_Solver < handle
 
         % policy and value functions
 		con;
+        con2;
 		conupdate;
+        conupdate2;
 		V;
 		Vupdate;
         sav;
@@ -32,6 +34,7 @@ classdef EGP_EZ_Solver < handle
         % policy functions of next period cash-on-hand
 		c_xp;
 		V_xp;
+        c_xp2;
 
 		Vinterp;
 
@@ -56,8 +59,11 @@ classdef EGP_EZ_Solver < handle
 
 		    % initial guess for consumption function, stacked state combinations
 		    r_adj = max(obj.p.r, 0.001);
-		    obj.con = r_adj * obj.grids.x.matrix;
-
+            total_resources = r_adj * obj.grids.x.matrix;
+            %obj.con = r_adj * obj.grids.x.matrix;
+            obj.con = total_resources / (1 + obj.p.phi^(heterogeneity.risk_aver_broadcast)); 
+            obj.con2 = obj.p.phi^(1 / heterogeneity.risk_aver_broadcast) * obj.con;
+		    
 		    % initial guess for value function
 		    obj.V = obj.con;
 
@@ -101,7 +107,11 @@ classdef EGP_EZ_Solver < handle
 		            		' max con fn diff is ' num2str(obj.EGP_cdiff)]);
 		        end
 
-		        obj.con = obj.conupdate;
+		        % obj.con = obj.conupdate;
+                total_conupdate = obj.grids.x.matrix - obj.sav - savtax;
+                obj.conupdate = total_conupdate / (1 + obj.p.phi);   % For good 1
+                obj.conupdate2 = obj.p.phi^(1 / obj.p.sigma) * obj.conupdate;          % For good 2
+
 		        obj.V = obj.Vupdate;
 
 				iter = iter + 1;
@@ -111,7 +121,8 @@ classdef EGP_EZ_Solver < handle
 		function iterate_once(obj,income)
 			obj.con = reshape(obj.con, obj.ss_dims);
 			obj.V = reshape(obj.V, obj.ss_dims);
-
+            obj.con2 = reshape(obj.con2, obj.ss_dims);
+			obj.V2 = reshape(obj.V2, obj.ss_dims);
 			% store c(x') and V(x')
 			obj.update_fns_of_xp();
 
@@ -123,9 +134,10 @@ classdef EGP_EZ_Solver < handle
 
 			% c(s) by inverting marginal utility
 			con_s = muc_s .^ (-1 ./ obj.heterogeneity.invies_broadcast);
+            con_s2 = obj.p.phi * muc_s .^ (-1 ./ obj.heterogeneity.invies_broadcast);
 
 			% x(s)
-        	x_s = obj.sgrid_repeated +  obj.sgrid_tax + con_s;
+        	x_s = obj.sgrid_repeated +  obj.sgrid_tax + con_s + con_s2;
 
 	        % s(x) saving policy function
 	        obj.sav = obj.get_sav_x_by_interpolating_x_s(x_s);
@@ -142,7 +154,9 @@ classdef EGP_EZ_Solver < handle
 
 		function update_fns_of_xp(obj)
 			obj.c_xp = zeros(obj.ss_dims_aug);
+            obj.c_xp2 = zeros(obj.ss_dims_aug);
 			obj.V_xp = zeros(obj.ss_dims_aug);
+            
 			reshape_nx_nyT = @(arr) reshape(arr, [obj.p.nx, 1, 1, 1, obj.p.nyT]);
 
 			for ib  = 1:obj.p.nz
@@ -153,6 +167,11 @@ classdef EGP_EZ_Solver < handle
 	            coninterp = griddedInterpolant(obj.grids.x.matrix(:,iyP,iyF,ib),...
 	            	obj.con(:,iyP,iyF,ib), 'linear');
 	            obj.c_xp(:,iyP,iyF,ib,:) = reshape_nx_nyT(coninterp(xp_s_ib_iyF_iyP(:)));
+
+                coninterp2 = griddedInterpolant(obj.grids.x.matrix(:,iyP,iyF,ib),...
+	            	obj.con2(:,iyP,iyF,ib), 'linear');
+	            obj.c_xp2(:,iyP,iyF,ib,:) = reshape_nx_nyT(coninterp2(xp_s_ib_iyF_iyP(:)));
+
 	            obj.Vinterp{iyP,iyF,ib} = griddedInterpolant(...
 	            	obj.grids.x.matrix(:,iyP,iyF,ib), obj.V(:,iyP,iyF,ib), 'linear');
 	            obj.V_xp(:,iyP,iyF,ib,:) = reshape_nx_nyT(...
@@ -167,6 +186,10 @@ classdef EGP_EZ_Solver < handle
 	        mucnext = obj.c_xp .^ (-obj.heterogeneity.invies_broadcast) ...
 	        	.* obj.V_xp .^ (obj.heterogeneity.invies_broadcast ...
 	        		- obj.heterogeneity.risk_aver_broadcast);
+            mucnext2 = (obj.p.phi * obj.c_xp2) .^ (-obj.heterogeneity.invies_broadcast) ...
+	        	.* obj.V_xp .^ (obj.heterogeneity.invies_broadcast ...
+	        		- obj.heterogeneity.risk_aver_broadcast);
+            mucnext = mucnext + mucnext2;
 	       	EyT_mucnext = reshape(mucnext, [], obj.p.nyT) * income.yTdist;
 	        
 	        % expected muc
@@ -287,7 +310,9 @@ classdef EGP_EZ_Solver < handle
 		    % and find saving values associated with xvals
 		    model.savinterp = cell(obj.p.nyP,obj.p.nyF,obj.p.nz);
 		    model.coninterp = cell(obj.p.nyP,obj.p.nyF,obj.p.nz);
+            model.coninterp2 = cell(obj.p.nyP,obj.p.nyF,obj.p.nz);
 		    model.coninterp_mpc = cell(obj.p.nyP,obj.p.nyF,obj.p.nz);
+            model.coninterp_mpc2 = cell(obj.p.nyP,obj.p.nyF,obj.p.nz);
 		    for ib = 1:obj.p.nz
 		    for iyF = 1:obj.p.nyF
 		    for iyP = 1:obj.p.nyP
@@ -297,6 +322,8 @@ classdef EGP_EZ_Solver < handle
 		        model.coninterp{iyP,iyF,ib} = ...
 		            griddedInterpolant(obj.grids.x.matrix(:,iyP,iyF,ib),...
 		            	model.con(:,iyP,iyF,ib),'linear'); 
+               model.coninterp2{iyP,iyF,ib} = griddedInterpolant(...
+                obj.grids.x.matrix(:,iyP,iyF,ib), obj.con2(:,iyP,iyF,ib), 'linear');
 
 		        xmin = obj.grids.x.matrix(1,iyP,iyF,ib);
 		        cmin = model.con(1,iyP,iyF,ib);
@@ -305,6 +332,10 @@ classdef EGP_EZ_Solver < handle
 		        model.coninterp_mpc{iyP,iyF,ib} = @(x) extend_interp(...
 		            model.coninterp{iyP,iyF,ib}, x, xmin, cmin, -inf,...
 		            obj.p.borrow_lim);
+                model.coninterp_mpc2{iyP,iyF,ib} = @(x) extend_interp(...
+		            model.coninterp2{iyP,iyF,ib}, x, xmin, cmin, -inf,...
+		            obj.p.borrow_lim);
+
 		    end
 		    end
             end

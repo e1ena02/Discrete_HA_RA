@@ -21,8 +21,10 @@ classdef MPCSimulator < handle
 		xsim;
 		asim;
 		csim;
+        csim2;
 		ssim;
 		csim_noshock;
+        csim2_noshock;
 
 		ygrosssim;
 		ynetsim;
@@ -149,6 +151,7 @@ classdef MPCSimulator < handle
 	        obj.xsim = zeros(obj.Nsim, obj.Tmax);
 	        obj.asim = zeros(obj.Nsim, obj.Tmax);
 	        obj.csim = zeros(obj.Nsim, obj.Tmax);
+            obj.csim2 = zeros(obj.Nsim, obj.Tmax);
 	        obj.ssim = zeros(obj.Nsim, obj.Tmax);
 			for it = 1:obj.Tmax
 	            % Update cash-on-hand          
@@ -190,10 +193,13 @@ classdef MPCSimulator < handle
 	            end
 	        end
 	        
-	        obj.csim = obj.xsim - obj.ssim - p.savtax * max(obj.ssim-p.savtaxthresh, 0);
+	        obj.csim = (obj.xsim - obj.ssim - p.savtax * ...
+                max(obj.ssim-p.savtaxthresh, 0)) ./ (1 + p.phi);
+            obj.csim2 = p.phi .* obj.csim;
 			
 			if ishock == 0
 				obj.csim_noshock = obj.csim;
+                obj.csim2_noshock = obj.csim2;
 			end
 		end
 
@@ -225,22 +231,28 @@ classdef MPCSimulator < handle
 			shock = p.shocks(ishock);
 
 			% MPC in period 1 out of period 1 shock
-			mpcs_1_1 = (obj.csim(:,1) - obj.csim_noshock(:,1)) / shock;
+			mpcs_1_1 = (obj.csim(:,1) + obj.csim2(:, 1)...
+                - obj.csim_noshock(:,1) - obj.csim2_noshock(:, 1)) / shock;
             mpcs_1_1(obj.adjust_mpc,1) = 1;  
             obj.mpcs(ishock).avg_1_1 = mean(mpcs_1_1);
+            assignin('base', 'mpc1', mpcs_1_1);
+            foo()
 
             % MPC in period 2 out of period 1 shock
-            mpcs_1_2 = (obj.csim(:,2) - obj.csim_noshock(:,2)) / shock;
+            mpcs_1_2 = (obj.csim(:,2) + obj.csim2(:, 2)...
+                - obj.csim_noshock(:,1) - obj.csim2_noshock(:, 2)) / shock;
             mpcs_1_2(obj.adjust_mpc) = 0;
             obj.mpcs(ishock).avg_1_2 = mean(mpcs_1_2);
 
             % MPC in period 3 out of period 1 shock
-            mpcs_1_3 = (obj.csim(:,3) - obj.csim_noshock(:,3)) / shock;
+            mpcs_1_3 = (obj.csim(:,3) + obj.csim2(:, 3)...
+                - obj.csim_noshock(:,3) - obj.csim2_noshock(:, 3)) / shock;
             mpcs_1_3(obj.adjust_mpc) = 0;
             obj.mpcs(ishock).avg_1_3 = mean(mpcs_1_3);
 
             % MPC in period 4 out of period 1 shock
-            mpcs_1_4 = (obj.csim(:,4) - obj.csim_noshock(:,4)) / shock;
+            mpcs_1_4 = (obj.csim(:,4) + obj.csim2(:, 4)...
+                - obj.csim_noshock(:,4) - obj.csim2_noshock(:, 4)) / shock;
             mpcs_1_4(obj.adjust_mpc) = 0;
             obj.mpcs(ishock).avg_1_4 = mean(mpcs_1_4);
 

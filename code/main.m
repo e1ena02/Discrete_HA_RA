@@ -45,6 +45,12 @@ function results = main(p)
         egp_ez_solver = solver.EGP_EZ_Solver(p, grdEGP, heterogeneity, income);
         egp_ez_solver.solve(income);
         basemodel = egp_ez_solver.return_model();
+    elseif p.phiH ~= 0
+        nextmpcshock = 0;
+        periods_until_shock = 0;
+        basemodel = solver.solve_EGP_wshock(...
+            p, grdEGP, heterogeneity, income, nextmpcshock,...
+            periods_until_shock, []);
     else
         nextmpcshock = 0;
         periods_until_shock = 0;
@@ -52,6 +58,7 @@ function results = main(p)
             p, grdEGP, heterogeneity, income, nextmpcshock,...
             periods_until_shock, []);
     end
+  
     basemodel = solver.find_stationary_adist(...
         p, basemodel, income, grdDST, heterogeneity);
 
@@ -80,6 +87,7 @@ function results = main(p)
     end
 
     if p.DeterministicMPCs
+        if p.phiH == 0
         % Try to solve deterministic model
         norisk = solver.solve_EGP_deterministic(...
             p, grdEGP, heterogeneity);
@@ -90,16 +98,35 @@ function results = main(p)
                 statistics.direct_MPCs_by_computation_norisk(...
                     p, norisk, income, heterogeneity, grdDST);
         else
+            norisk = solver.solve_wEGP_deterministic(...
+            p, grdEGP, heterogeneity);
+            foo()
+
+        if norisk.complete
+            % If converged, compute MPCs
+            results.norisk.mpcs1_a_direct = ...
+                statistics.direct_MPCs_by_computation_norisk(...
+                    p, norisk, income, heterogeneity, grdDST);
+        end
+        end
+        else
             p.set('DeterministicMPCs', false, true);
         end
     end
+    
 
     %% --------------------------------------------------------------------
     % SIMULATIONS
     % ---------------------------------------------------------------------
     if p.Simulate
+        if p.phiH == 0
         results.sim = solver.simulate(...
             p, income, basemodel, grdDST, heterogeneity);
+       
+        else
+            results.sim = solver.wsimulate(p, income,...
+                basemodel, grdDST, heterogeneity);
+           
     end
 
     %% --------------------------------------------------------------------
@@ -110,14 +137,18 @@ function results = main(p)
         disp('Solving for policy functions of anticipated future shocks')
         if p.freq == 4
             maxT = 10;
+           
         else
             maxT = 5;
+         
         end
     end
     
     % mpcmodels{ishock,tlshock} stores the policy functions associated with the case
     % where the shock occurs in (tlshock - 1) periods after the current period
     mpcmodels = cell(6, maxT);
+    foo();
+    if p.phiH == 0
     for ishock = 1:6
         % policy functions are the same as baseline when shock is received in
         % the current period
@@ -131,9 +162,30 @@ function results = main(p)
                 tlshock-1, mpcmodels{ishock,tlshock-1});
         end
     end
+    else
+        for ishock = 1:6
+        % policy functions are the same as baseline when shock is received in
+        % the current period
+        mpcmodels{ishock,1} = basemodel;
+
+        % get consumption functions conditional on future shock
+        for tlshock = 2:maxT
+            nextmpcshock = (tlshock == 2) * p.shocks(ishock);
+            mpcmodels{ishock,tlshock} = solver.solve_EGP_wshock(...
+                p, grdEGP, heterogeneity, income, nextmpcshock,...
+                tlshock-1, mpcmodels{ishock,tlshock-1});
+            assignin("base", "nextmpcshock", nextmpcshock);
+            assignin("base", "mpcmodels", mpcmodels);
+            foo()
+        end
+    end
+    end
+
 
     mpc_finder = statistics.MPCFinder(p, income, grdDST, heterogeneity,...
         basemodel, mpcmodels);
+    % After creating regular MPCFinder
+    
     if p.MPCs
         disp('Computing MPCs')
         mpc_finder.solve(p, grdDST);
@@ -173,109 +225,109 @@ function results = main(p)
     %% --------------------------------------------------------------------
     % FIGURES
     % ---------------------------------------------------------------------
-    if p.MakePlots
-        % plot(grdDST.a.vec, cumsum(results.stats.pmf_a))
-        % xlim([0 0.2])
-
-        % Wealth at low yP
-        nbins = 100;
-        amin = grdDST.a.vec(1);
-        amax = {1};
-        amax_visible = 0.5;
-
-        iyP = 1:11;
-        nyP = numel(iyP);
-
-        %pmf_a = results.adist(:,iyP,:,:);
-        %pmf_a = pmf_a(:) / sum(pmf_a(:));
-        %pmf_a = reshape(pmf_a, [], nyP);
-        %pmf_a = sum(pmf_a, 2);
-        pmf_a = results.stats.pmf_a
-
-        wealth_plotter = statistics.WealthPlotter(p, grdDST.a.vec, pmf_a);
-        [ax, wealth_hist] = wealth_plotter.create_histogram(nbins, amax{:});
-        title("Wealth distribution, truncated above")
-        ax.XLim = [amin, amax_visible];
-        ax.YLim = [0, max(wealth_hist.Values(1:end-1))];
-
-        figpath = fullfile('output', 'wealth_distribution.jpg');
-        saveas(gcf, figpath)
-
-        %% MPCs Function
-        fontsize = 12;
-        mpcs = results.mpcs(5).mpcs_1_t{1}; %used to be results.direct.mpcs(5).mpcs_1_t{1};
-        mpc_plotter = statistics.MPCPlotter(p, grdDST.a.matrix, mpcs);
-        mpc_plotter.fontsize = fontsize;
-        mpc_plotter.show_grid = 'on';
-
-        yP_indices = [3, 8];
-        zoomed_window = true;
-        shock_size = 0.01;
-        [ax_main, ax_window] = mpc_plotter.create_mpcs_plot_yPs(...
-                    yP_indices, zoomed_window, shock_size);
-        ylim_main = ax_main.YLim;
-
-        imedian = find(p.percentiles == 50);
-        median_wealth_struct = results.stats.wpercentiles(imedian);%Old: results.stats.wpercentiles(imedian)
-        median_wealth = median_wealth_struct{1}.value
-        ax_main = mpc_plotter.add_median_wealth(ax_main, median_wealth);
-
-        ax_main.XLim = [0, 5];
-        ax_main.YLim = ylim_main;
-
-        window_max_x = 0.3;
-        ax_window.YLim = ax_main.YLim;
-        ax_window.XLim = [0, window_max_x];
-        xticks(ax_window, [0:0.1:window_max_x])
-        yticks(ax_window, [0:0.1:0.3])
-        set(ax_window, 'FontSize', fontsize-2)
-        ax_window.YTick = ax_main.YTick(1:2:end);
-
-        figpath = fullfile('output', 'mpc_function_yPs.jpg');
-        saveas(gcf, figpath)
-
-        %% MPCs Function For Diff Shock Sizes
-        fontsize = 12;
-        mpcs = {    results.mpcs(2).mpcs_1_t{1}
-                    results.mpcs(3).mpcs_1_t{1}
-                    results.mpcs(5).mpcs_1_t{1}
-                    results.mpcs(6).mpcs_1_t{1}
-               };
-
-        for ii = 1:numel(mpcs)
-            mpcs{ii} = reshape(mpcs{ii}, [p.nx_DST p.nyP p.nyF p.nz]);
-        end
-
-        mpc_plotter = statistics.MPCPlotter(p, grdDST.a.matrix, mpcs);
-        mpc_plotter.fontsize = fontsize;
-        mpc_plotter.show_grid = 'on';
-
-        iyP = median(1:p.nyP);
-        ishocks = [2 3 5 6];
-        zoomed_window = true;
-        shock_size = 0.01;
-        [ax_main, ax_window] = mpc_plotter.create_mpc_plot_shocks(...
-                    iyP, zoomed_window, ishocks);
-        ylim_main = ax_main.YLim;
-
-        imedian = find(p.percentiles == 50);
-        median_wealth_struct = results.stats.wpercentiles(imedian);
-        median_wealth = median_wealth_struct{1}.value;
-        ax_main = mpc_plotter.add_median_wealth(ax_main, median_wealth);
-
-        ax_main.XLim = [0, 5];
-        ax_main.YLim = ylim_main;
-
-        window_max_x = 0.3;
-        ax_window.YLim = ax_main.YLim;
-        ax_window.XLim = [0, window_max_x];
-        xticks(ax_window, [0:0.1:window_max_x])
-        yticks(ax_window, [0:0.1:0.3])
-        set(ax_window, 'FontSize', fontsize-2)
-        ax_window.YTick = ax_main.YTick(1:2:end);
-
-        figpath = fullfile('output', 'mpc_function_shocks.jpg');
-        saveas(gcf, figpath)
+    % if p.MakePlots
+    %     % plot(grdDST.a.vec, cumsum(results.stats.pmf_a))
+    %     % xlim([0 0.2])
+    % 
+    %     % Wealth at low yP
+    %     nbins = 100;
+    %     amin = grdDST.a.vec(1);
+    %     amax = {1};
+    %     amax_visible = 0.5;
+    % 
+    %     iyP = 1:11;
+    %     nyP = numel(iyP);
+    % 
+    %     %pmf_a = results.adist(:,iyP,:,:);
+    %     %pmf_a = pmf_a(:) / sum(pmf_a(:));
+    %     %pmf_a = reshape(pmf_a, [], nyP);
+    %     %pmf_a = sum(pmf_a, 2);
+    %     pmf_a = results.stats.pmf_a
+    % 
+    %     wealth_plotter = statistics.WealthPlotter(p, grdDST.a.vec, pmf_a);
+    %     [ax, wealth_hist] = wealth_plotter.create_histogram(nbins, amax{:});
+    %     title("Wealth distribution, truncated above")
+    %     ax.XLim = [amin, amax_visible];
+    %     ax.YLim = [0, max(wealth_hist.Values(1:end-1))];
+    % 
+    %     figpath = fullfile('output', 'wealth_distribution.jpg');
+    %     saveas(gcf, figpath)
+    % 
+    %     %% MPCs Function
+    %     fontsize = 12;
+    %     mpcs = results.mpcs(5).mpcs_1_t{1}; %used to be results.direct.mpcs(5).mpcs_1_t{1};
+    %     mpc_plotter = statistics.MPCPlotter(p, grdDST.a.matrix, mpcs);
+    %     mpc_plotter.fontsize = fontsize;
+    %     mpc_plotter.show_grid = 'on';
+    % 
+    %     yP_indices = [3, 8];
+    %     zoomed_window = true;
+    %     shock_size = 0.01;
+    %     [ax_main, ax_window] = mpc_plotter.create_mpcs_plot_yPs(...
+    %                 yP_indices, zoomed_window, shock_size);
+    %     ylim_main = ax_main.YLim;
+    % 
+    %     imedian = find(p.percentiles == 50);
+    %     median_wealth_struct = results.stats.wpercentiles(imedian);%Old: results.stats.wpercentiles(imedian)
+    %     median_wealth = median_wealth_struct{1}.value
+    %     ax_main = mpc_plotter.add_median_wealth(ax_main, median_wealth);
+    % 
+    %     ax_main.XLim = [0, 5];
+    %     ax_main.YLim = ylim_main;
+    % 
+    %     window_max_x = 0.3;
+    %     ax_window.YLim = ax_main.YLim;
+    %     ax_window.XLim = [0, window_max_x];
+    %     xticks(ax_window, [0:0.1:window_max_x])
+    %     yticks(ax_window, [0:0.1:0.3])
+    %     set(ax_window, 'FontSize', fontsize-2)
+    %     ax_window.YTick = ax_main.YTick(1:2:end);
+    % 
+    %     figpath = fullfile('output', 'mpc_function_yPs.jpg');
+    %     saveas(gcf, figpath)
+    % 
+    %     %% MPCs Function For Diff Shock Sizes
+    %     fontsize = 12;
+    %     mpcs = {    results.mpcs(2).mpcs_1_t{1}
+    %                 results.mpcs(3).mpcs_1_t{1}
+    %                 results.mpcs(5).mpcs_1_t{1}
+    %                 results.mpcs(6).mpcs_1_t{1}
+    %            };
+    % 
+    %     for ii = 1:numel(mpcs)
+    %         mpcs{ii} = reshape(mpcs{ii}, [p.nx_DST p.nyP p.nyF p.nz]);
+    %     end
+    % 
+    %     mpc_plotter = statistics.MPCPlotter(p, grdDST.a.matrix, mpcs);
+    %     mpc_plotter.fontsize = fontsize;
+    %     mpc_plotter.show_grid = 'on';
+    % 
+    %     iyP = median(1:p.nyP);
+    %     ishocks = [2 3 5 6];
+    %     zoomed_window = true;
+    %     shock_size = 0.01;
+    %     [ax_main, ax_window] = mpc_plotter.create_mpc_plot_shocks(...
+    %                 iyP, zoomed_window, ishocks);
+    %     ylim_main = ax_main.YLim;
+    % 
+    %     imedian = find(p.percentiles == 50);
+    %     median_wealth_struct = results.stats.wpercentiles(imedian);
+    %     median_wealth = median_wealth_struct{1}.value;
+    %     ax_main = mpc_plotter.add_median_wealth(ax_main, median_wealth);
+    % 
+    %     ax_main.XLim = [0, 5];
+    %     ax_main.YLim = ylim_main;
+    % 
+    %     window_max_x = 0.3;
+    %     ax_window.YLim = ax_main.YLim;
+    %     ax_window.XLim = [0, window_max_x];
+    %     xticks(ax_window, [0:0.1:window_max_x])
+    %     yticks(ax_window, [0:0.1:0.3])
+    %     set(ax_window, 'FontSize', fontsize-2)
+    %     ax_window.YTick = ax_main.YTick(1:2:end);
+    % 
+    %     figpath = fullfile('output', 'mpc_function_shocks.jpg');
+    %     saveas(gcf, figpath)
 
         %%Elbarmi
 %        % Set the limits and overlay the MPCs plot on the same figure

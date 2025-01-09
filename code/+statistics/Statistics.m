@@ -252,8 +252,9 @@ classdef Statistics < handle
 
 		function construct_xgrid_variables(obj)
 			obj.xgrid_variables = struct();
-            
             dims = [obj.nx*obj.p.nyT, obj.p.nyP, obj.p.nyF, obj.p.nz];
+            
+            %if obj.p.phiH == 0
             vars = {'xvals', 'y_x', 'nety_x', 'sav_x', 'con_x', 'xdist'};
             for iv = 1:numel(vars)
                 obj.xgrid_variables.(vars{iv}) = zeros(dims);
@@ -271,7 +272,27 @@ classdef Statistics < handle
                     end
                 end
             end
-		end
+        % else
+        %      vars = {'xvals', 'y_x', 'nety_x', 'sav_x', 'con1_x', ...,
+        %          'con2_x','xdist'};
+        %     for iv = 1:numel(vars)
+        %         obj.xgrid_variables.(vars{iv}) = zeros(dims);
+        %     end
+        % 
+		% 	% Sort by x values
+        %     dim1 = obj.nx*obj.p.nyT;
+        %     for iyP = 1:obj.p.nyP
+        %         for iyF = 1:obj.p.nyF
+        %             for iz = 1:obj.p.nz
+        %                 [~, ixvals] = sortrows(obj.model.xvals(:,iyP,iyF,iz));
+        %                 for iv = 1:numel(vars)
+        %                     obj.xgrid_variables.(vars{iv})(:,iyP,iyF,iz) = obj.model.(vars{iv})(ixvals,iyP,iyF,iz);
+        %                 end
+        %             end
+        %         end
+        %     end
+    	% 	end
+    end
 
 		function out = expectation(obj, vals)
 			out = dot(obj.pmf(:), vals(:));

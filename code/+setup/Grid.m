@@ -7,6 +7,7 @@ classdef Grid < handle
 		x;
 		s;
 		a;
+        e = 0;
 
 		% Either 'EGP' or 'DST'
 		gtype;
@@ -91,7 +92,8 @@ classdef Grid < handle
 
 		function obj = create_xgrid(obj, params, income)
 			minyT = reshape(min(income.netymat, [], 2), [1 params.nyP params.nyF]);
-			xgrid = obj.R_broadcast .* obj.s.matrix + minyT;
+			%xgrid = obj.R_broadcast .* obj.s.matrix + minyT;
+            xgrid = obj.R_broadcast .* obj.s.matrix + minyT;
 			if numel(params.r) == 1
 				xgrid = repmat(xgrid, [1 1 1 params.nz]);
 			end

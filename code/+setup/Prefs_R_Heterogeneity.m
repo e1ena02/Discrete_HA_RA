@@ -23,14 +23,14 @@ classdef Prefs_R_Heterogeneity < handle
 
 		% Returns matrices
 		R_broadcast;
-		r_broadcast;
-        phi_broadcast;
+	    r_broadcast;
 
 		% Matrices for risk aversion, inverse IES, and temptation parameter
 		risk_aver_broadcast;
 		invies_broadcast;
 		temptation_broadcast;
         expense_broadcast;
+        phi_broadcast; % transition matrix for phi
 
 		% Distribution and transition matrices for z-hetergeneity
 		zdist;
@@ -54,6 +54,7 @@ classdef Prefs_R_Heterogeneity < handle
 			obj.initialize_IES_heterogeneity(params);
 			obj.initialize_temptation_heterogeneity(params);
             obj.initialize_returns_heterogeneity(params);
+            obj.initialize_expense_heterogeneity(params);
 
             obj.create_dists(params);
             obj.zcumdist = cumsum(obj.zdist);
@@ -117,14 +118,26 @@ classdef Prefs_R_Heterogeneity < handle
 			obj.r_broadcast = reshape(params.r, [1 1 1 nr]);
 		    obj.R_broadcast = 1 + obj.r_broadcast;
         end
-        %% -------------------------------------------------------
+
+        % -------------------------------------------------------
 	    % Expense Heterogeneity
 	    % --------------------------------------------------------
         function initialize_expense_heterogeneity(obj, params)
-            np = numel(params.phi)
-            obj.phi_broadcast = reshape(params.phi, [1 1 1 1 np])
+            params.phi = zeros(1, 11);
+            params.phi_trans = [19/20 1/20; params.theta 1-params.theta];
         end
-
+        
+        % -------------------------------------------------------
+	    % Employment Heterogeneity
+	    % --------------------------------------------------------\
+        % function initialize_employment_heterogeneity(obj, params)
+        %     params.e = zeros(3, 11);
+        %     a = (99.7 + 98 + 98.4) / 300;
+        %     c = 0.4/300;
+        %     b = 1 - a - c;
+        %     params.e = [a b c];
+        % end
+        %%I did this all in the nz = 3 
 		%% -------------------------------------------------------
 	    % Distributions and Transition Matrix
 	    % --------------------------------------------------------
@@ -139,8 +152,11 @@ classdef Prefs_R_Heterogeneity < handle
 	    	if obj.nz == 1
 	    		obj.zdist = 1;
 		        obj.ztrans = 1;
+                %%this represents the long-term unemployment case so beware
+                %%that this is extremely loosely done
             elseif obj.nz == 3
-                    obj.zdist = [0.8, 0.195, .005];
+                   
+                    obj.zdist = [a, b, c];
                     obj.ztrans = [
                          0.8, 0.15, 0.05;  % From employed to employed, unemployed, long-term unemployed
                          0.4, 0.5, 0.1;    % From unemployed to employed, unemployed, long-term unemployed

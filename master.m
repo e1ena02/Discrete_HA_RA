@@ -16,18 +16,19 @@ runopts.MakePlots = true;
 runopts.MPCs = true;
 runopts.MPCs_news = true;
 runopts.MPCs_loan_and_loss = false;
-runopts.DeterministicMPCs = true; % must be on if decompositions are needed
+runopts.MPCs = true; % must be on if decompositions are needed
 runopts.SaveOutput = true;
 
 % name of parameters script in code/+params directory
 runopts.mode = 'parameters'; % 'parameters'
 
 % select experiment (ignored when run on server)
-%name = sprintf('HtM = %g', 0.142) %%for HtM households
-runopts.name_to_run = 'Quarterly'; % ''
+% name = sprintf('HtM = %g', 0.142); %%for HtM households
+% runopts.name_to_run = 'Expense heterogeneity'; % ''
+runopts.name_to_run = 'Quarterly';
 runopts.number = []; % []
 
-%% ------------------------------------------------------------------------
+%% ------------------------------------------i------------------------------
 % HOUSEKEEPING, DO NOT CHANGE
 % -------------------------------------------------------------------------
 % Get task id if running on server
@@ -86,7 +87,10 @@ fprintf('Finished parameterization %s\n', params.name)
 %% ------------------------------------------------------------------------
 % CREATE TABLE OF RESULTS
 % -------------------------------------------------------------------------
-table_out = tables.OutputTable(params, results.stats)
+assignin("base", "params", params);
+assignin("base", "results", results);
+
+table_out = tables.OutputTable(params, results.stats);
 writetable(table_out, runopts.savexlxpath, 'WriteRowNames', true);
 
 %% ------------------------------------------------------------------------
@@ -138,11 +142,11 @@ if runopts.MakePlots
         statistics.DHAPlots.consumption_wealth_overlay(results.stats, params);
         figpath = fullfile('output', 'baseline_quarterly_c_x_overlay.jpg');
         saveas(gcf, figpath)
-        
+
         statistics.DHAPlots.mpc_function(results.stats, 'mpc_type', 'period');
         figpath = fullfile('output', 'baseline_quarterly_period_mpcs.jpg');
         saveas(gcf, figpath)
-        
+
         statistics.DHAPlots.mpc_function(results.stats, 'mpc_type', 'cumulative');
         figpath = fullfile('output', 'baseline_quarterly_cumulative_mpcs.jpg');
         saveas(gcf, figpath)

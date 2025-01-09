@@ -10,8 +10,8 @@ function table_out = OutputTable(p, stats)
 	descr = struct('value', p.descr, 'label', 'Description');
 	intro_stats = {...
 		descr
-		stats.mpcs(5).quarterly
-		stats.mpcs(5).annual
+		% stats.mpcs(5).quarterly
+		% stats.mpcs(5).annual
 		stats.beta_A
 		stats.mean_gross_y_annual
 		stats.std_log_gross_y_annual
@@ -59,7 +59,7 @@ function table_out = OutputTable(p, stats)
 	new_rows = table(values, 'RowNames', rownames(:), 'VariableNames', {name});
 	table_out = [table_out; new_rows];
 
-	%% MPC Size Effects
+	% MPC Size Effects
 	paneltitle = struct('value', NaN, 'label', '____MPC Size Effects');
 	mpcsize_stats = {
 		paneltitle
@@ -74,7 +74,7 @@ function table_out = OutputTable(p, stats)
 	new_rows = table(values, 'RowNames', rownames(:), 'VariableNames', {name});
 	table_out = [table_out; new_rows];
 
-	%% MPC Sign Effects
+	% MPC Sign Effects
 	paneltitle = struct('value', NaN, 'label', '____MPC Sign Effects');
 	mpcsign_stats = {
 		paneltitle

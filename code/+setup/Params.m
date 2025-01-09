@@ -100,7 +100,7 @@ classdef Params < handle
         risk_aver = 1;
     	beta0 = 0.98;
     	temptation = 0;
-        phi = 0;
+       
 
         % Bounds on beta (used when calibrating)
     	betaL = 0.80; % lower bound
@@ -140,9 +140,19 @@ classdef Params < handle
         betawidth = 0; % distance between beta's
         beta_grid_forced = []; % overrides all other beta values if used
 
+        % Expense Heterogeneity
+        phi = [];
+        phiL = 0;
+        phiH = 0;
+        theta = 0;
+        phi_trans = [];
+
+        % Employment Heterogeneity
+        % e = 1;
+
         % Length of z-dimension heterogeneity
         nz = 1;
-
+        
         % Probability of switch in z-dimension
         prob_zswitch = 0;
         zdist_forced;
@@ -180,6 +190,7 @@ classdef Params < handle
                 error('Frequency must be 1 or 4')
             end
 
+
             % Override default values with addl_params structure
             if nargin >= 3
                 pfields = fields(addl_params)';
@@ -210,7 +221,7 @@ classdef Params < handle
             obj.MPCs = runopts.MPCs;
             obj.MPCs_news = runopts.MPCs_news;
             obj.MPCs_loan_and_loss = runopts.MPCs_loan_and_loss;
-            obj.DeterministicMPCs = runopts.DeterministicMPCs;
+            %obj.DeterministicMPCs = runopts.DeterministicMPCs;
         end
         
         function obj = set_index(obj)
