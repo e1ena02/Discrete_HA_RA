@@ -103,7 +103,7 @@ function model = solve_EGP(p, grids, heterogeneity,...
             p, income, grids, c_xp, xprime_s, R_bc,...
             Emat, heterogeneity.betagrid_broadcast,...
             heterogeneity.risk_aver_broadcast,...
-            tempt_expr, svecs_bc);
+            tempt_expr, svecs_bc, next_phi);
 
         % c(s)
         con_s = aux.u1inv(heterogeneity.risk_aver_broadcast, muc_s);
@@ -123,7 +123,7 @@ function model = solve_EGP(p, grids, heterogeneity,...
         conupdate = xmat - sav - sav_tax;
         conupdate1 = conupdate ./ phi;
         conupdate2 = conupdate1 .* phi;
-        phi = phi_next;
+        phi = next_phi;
 
         cdiff = max(abs(conupdate(:) + conupdate2(:)-conlast(:)));
         if (mod(iter, 100) == 0) && ~p.calibrating
@@ -273,7 +273,7 @@ function muc_s = get_marginal_util_cons(...
     mucnext = reshape(muc_c(:) + muc_tempt(:), [], p.nyT);
 
     % Integrate
-    expectation = Emat * mucnext .* phi' * income.yTdist;
+    expectation = Emat * mucnext * income.yTdist;
     % assignin("base", "Emat", Emat);
     % assignin("base","mucnext", mucnext);
     % assignin("base", "income", income);
